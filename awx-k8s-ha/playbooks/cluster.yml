@@ -1,0 +1,31 @@
+- name: Initialize first control plane
+  hosts: admin
+  become: true
+  roles:
+    - kubeadm_init
+    - kubectl_admin
+    - cni_flannel
+
+- name: Join additional control planes
+  hosts: control_plane:!admin
+  become: true
+  roles:
+    - kubeadm_join_control
+
+- name: Join workers
+  hosts: workers
+  become: true
+  roles:
+    - kubeadm_join_worker
+
+- name: Install ingress
+  hosts: admin
+  become: true
+  roles:
+    - { role: ingress_nginx, when: install_ingress_nginx | bool }
+
+#- name: Install NFS storage
+#  hosts: admin
+#  become: true
+#  roles:
+#    - { role: nfs_storage, when: install_nfs_storage | bool }

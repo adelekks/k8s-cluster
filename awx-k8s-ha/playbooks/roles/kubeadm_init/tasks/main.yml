@@ -1,0 +1,82 @@
+- name: Ensure kubeadm config dir
+  file:
+    path: /root/kubeadm
+    state: directory
+    mode: '0700'
+
+- name: Render kubeadm init config
+  template:
+    src: kubeadm-init.yaml.j2
+    dest: /root/kubeadm/kubeadm-init.yaml
+    mode: '0600'
+
+- name: Check if cluster already initialized
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: admin_conf
+
+- name: Initialize kubeadm on first control plane
+  command: kubeadm init --config=/root/kubeadm/kubeadm-init.yaml --upload-certs
+  when: not admin_conf.stat.exists
+  register: kubeadm_init_result
+
+- name: Save kubeadm init output
+  copy:
+    dest: /root/kubeadm/kubeadm-init-output.txt
+    content: "{{ kubeadm_init_result.stdout | default('already initialized') }}"
+    mode: '0600'
+
+- name: Generate join command
+  command: kubeadm token create --print-join-command
+  register: join_cmd_raw
+  changed_when: false
+
+- name: Get discovery token CA cert hash
+  shell: |
+    openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt \
+    | openssl rsa -pubin -outform der 2>/dev/null \
+    | openssl dgst -sha256 -hex \
+    | awk '{print "sha256:"$2}'
+  register: ca_cert_hash_raw
+  changed_when: false
+
+- name: Upload certs phase
+  shell: kubeadm init phase upload-certs --upload-certs | tail -1
+  register: cert_key_raw
+  changed_when: false
+
+- name: Extract kubeadm join token
+  set_fact:
+    kubeadm_join_token: "{{ join_cmd_raw.stdout | regex_search('--token\\s+(\\S+)', '\\1') | first }}"
+
+- name: Store kubeadm CA cert hash
+  set_fact:
+    kubeadm_ca_cert_hash: "{{ ca_cert_hash_raw.stdout }}"
+
+- name: Store kubeadm certificate key
+  set_fact:
+    kubeadm_certificate_key: "{{ cert_key_raw.stdout }}"    
+
+- name: Store worker join command fact
+  set_fact:
+    worker_join_command: "{{ join_cmd_raw.stdout }}"
+
+- name: Store control plane join command fact
+  set_fact:
+    control_plane_join_command: "{{ join_cmd_raw.stdout }} --control-plane --certificate-key {{ cert_key_raw.stdout }}"
+
+- name: Persist worker join script
+  copy:
+    dest: /root/kubeadm/join-worker.sh
+    mode: '0700'
+    content: |
+      #!/bin/bash
+      {{ join_cmd_raw.stdout }}
+
+- name: Persist control plane join script
+  copy:
+    dest: /root/kubeadm/join-control-plane.sh
+    mode: '0700'
+    content: |
+      #!/bin/bash
+      {{ join_cmd_raw.stdout }} --control-plane --certificate-key {{ cert_key_raw.stdout }}

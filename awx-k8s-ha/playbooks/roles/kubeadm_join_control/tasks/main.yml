@@ -1,0 +1,15 @@
+- name: Check if node already joined as control plane
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: joined
+
+- name: Render control plane join config
+  template:
+    src: kubeadm-control-plane-join.yaml.j2
+    dest: /root/kubeadm-control-plane-join.yaml
+    mode: '0600'
+  when: not joined.stat.exists
+
+- name: Join node to control plane with explicit local API port
+  command: kubeadm join --config /root/kubeadm-control-plane-join.yaml
+  when: not joined.stat.exists

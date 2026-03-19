@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ awx_namespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: awx-operator-controller-manager
+  namespace: {{ awx_namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: awx-operator-controller-manager
+  namespace: {{ awx_namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+      app.kubernetes.io/name: awx-operator
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+        app.kubernetes.io/name: awx-operator
+    spec:
+      serviceAccountName: awx-operator-controller-manager
+      containers:
+        - name: awx-manager
+          image: quay.io/ansible/awx-operator:{{ awx_operator_version }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: WATCH_NAMESPACE
+              value: "{{ awx_namespace }}"

@@ -1,0 +1,16 @@
+- name: Install ingress-nginx namespace and controller
+  shell: |
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: ingress_apply
+  changed_when: "'created' in ingress_apply.stdout or 'configured' in ingress_apply.stdout"
+
+- name: Patch ingress service to NodePort
+  shell: |
+    kubectl -n ingress-nginx patch svc ingress-nginx-controller \
+      -p '{"spec":{"type":"NodePort"}}'
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+  failed_when: false

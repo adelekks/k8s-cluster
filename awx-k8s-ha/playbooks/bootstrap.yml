@@ -1,0 +1,13 @@
+- name: Bootstrap all nodes
+  hosts: k8s_cluster
+  become: true
+  roles:
+    - common
+    - containerd
+
+- name: Configure HA components on control plane
+  hosts: control_plane
+  become: true
+  roles:
+    - keepalived
+    - haproxy

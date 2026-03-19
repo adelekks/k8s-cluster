@@ -1,0 +1,42 @@
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: "{{ ansible_host }}"
+  bindPort: {{ apiserver_bind_port }}
+nodeRegistration:
+  criSocket: "unix:///run/containerd/containerd.sock"
+  kubeletExtraArgs:
+    - name: node-ip
+      value: "{{ ansible_host }}"
+
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+clusterName: "{{ cluster_name }}"
+kubernetesVersion: "v{{ kubernetes_version }}"
+controlPlaneEndpoint: "{{ kubernetes_control_plane_endpoint }}"
+networking:
+  podSubnet: "{{ pod_network_cidr }}"
+  serviceSubnet: "{{ service_cidr }}"
+apiServer:
+  certSANs:
+    - "{{ vip_address }}"
+    - "{{ hostvars['cmhb-k8s-dev01'].ansible_host }}"
+    - "{{ hostvars['cmhb-k8s-dev02'].ansible_host }}"
+    - "{{ hostvars['cmhb-k8s-dev03'].ansible_host }}"
+    - "127.0.0.1"
+  extraArgs:
+    - name: secure-port
+      value: "{{ apiserver_bind_port }}"
+controllerManager: {}
+scheduler: {}
+etcd:
+  local:
+    dataDir: /var/lib/etcd
+
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+clusterDNS:
+  - "{{ cluster_dns_ip }}"

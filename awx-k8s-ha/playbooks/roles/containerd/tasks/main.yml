@@ -1,0 +1,56 @@
+- name: Install required repo tools
+  package:
+    name:
+      - yum-utils
+      - device-mapper-persistent-data
+      - lvm2
+    state: present
+
+- name: Add Docker CE repo
+  command: >
+    yum-config-manager --add-repo
+    https://download.docker.com/linux/centos/docker-ce.repo
+  args:
+    creates: /etc/yum.repos.d/docker-ce.repo
+
+- name: Install containerd
+  package:
+    name: containerd.io
+    state: present
+
+- name: Create containerd config dir
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+
+- name: Render containerd config
+  template:
+    src: config.toml.j2
+    dest: /etc/containerd/config.toml
+    mode: '0644'
+  notify: restart containerd
+
+- name: Enable containerd
+  service:
+    name: containerd
+    state: started
+    enabled: true
+
+- name: Ensure crictl config
+  copy:
+    dest: /etc/crictl.yaml
+    mode: '0644'
+    content: |
+      runtime-endpoint: unix:///run/containerd/containerd.sock
+      image-endpoint: unix:///run/containerd/containerd.sock
+      timeout: 10
+      debug: false
+
+- name: Restart kubelet after containerd
+  service:
+    name: kubelet
+    state: restarted
+
+- name: Flush handlers
+  meta: flush_handlers

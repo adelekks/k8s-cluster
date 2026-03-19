@@ -1,0 +1,55 @@
+- name: Create AWX namespace manifest
+  template:
+    src: awx-ns.yaml.j2
+    dest: /root/awx-ns.yaml
+    mode: '0644'
+
+- name: Apply AWX namespace
+  shell: kubectl apply -f /root/awx-ns.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Install AWX operator
+  template:
+    src: awx-operator.yaml.j2
+    dest: /root/awx-operator.yaml
+    mode: '0644'
+
+- name: Apply AWX operator manifest
+  shell: kubectl apply -f /root/awx-operator.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Wait for AWX operator deployment
+  shell: |
+    kubectl -n {{ awx_namespace }} rollout status deploy/awx-operator-controller-manager --timeout=300s
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+  failed_when: false
+
+- name: Create AWX instance manifest
+  template:
+    src: awx-instance.yaml.j2
+    dest: /root/awx-instance.yaml
+    mode: '0644'
+
+- name: Apply AWX instance
+  shell: kubectl apply -f /root/awx-instance.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Create AWX ingress
+  template:
+    src: awx-ingress.yaml.j2
+    dest: /root/awx-ingress.yaml
+    mode: '0644'
+
+- name: Apply AWX ingress
+  shell: kubectl apply -f /root/awx-ingress.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false

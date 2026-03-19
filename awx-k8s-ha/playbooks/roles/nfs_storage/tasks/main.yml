@@ -1,0 +1,39 @@
+- name: Add nfs-subdir-external-provisioner helm repo
+  shell: |
+    helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/ || true
+    helm repo update
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Install helm if missing
+  shell: |
+    command -v helm >/dev/null 2>&1 || curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Install NFS provisioner
+  shell: |
+    helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
+      --namespace kube-system \
+      --set nfs.server={{ nfs_server }} \
+      --set nfs.path={{ nfs_path }} \
+      --set storageClass.name=nfs \
+      --set storageClass.defaultClass=true
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: nfs_install
+  changed_when: "'STATUS: deployed' in nfs_install.stdout or 'STATUS: pending-upgrade' in nfs_install.stdout or 'Release' in nfs_install.stdout"
+
+- name: Apply explicit storageclass manifest
+  template:
+    src: nfs-storageclass.yaml.j2
+    dest: /root/nfs-storageclass.yaml
+    mode: '0644'
+
+- name: Apply storage class
+  shell: kubectl apply -f /root/nfs-storageclass.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false

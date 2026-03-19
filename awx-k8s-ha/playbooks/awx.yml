@@ -1,0 +1,5 @@
+- name: Deploy AWX
+  hosts: admin
+  become: true
+  roles:
+    - { role: awx, when: install_awx | bool }

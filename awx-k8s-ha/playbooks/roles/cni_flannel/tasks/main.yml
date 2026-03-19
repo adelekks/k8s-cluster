@@ -1,0 +1,19 @@
+- name: Apply flannel CNI
+  shell: |
+    kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: flannel_apply
+  changed_when: "'created' in flannel_apply.stdout or 'configured' in flannel_apply.stdout"
+
+- name: Wait for flannel pods
+  shell: |
+    kubectl -n kube-flannel get pods --no-headers | awk '{print $3}' | grep -v Running
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: flannel_status
+  retries: 20
+  delay: 15
+  until: flannel_status.rc != 0
+  changed_when: false
+  failed_when: false

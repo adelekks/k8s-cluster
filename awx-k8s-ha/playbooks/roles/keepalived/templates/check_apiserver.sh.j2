@@ -1,0 +1,2 @@
+#!/bin/bash
+timeout 2 bash -c "</dev/tcp/127.0.0.1/{{ haproxy_frontend_port }}" >/dev/null 2>&1

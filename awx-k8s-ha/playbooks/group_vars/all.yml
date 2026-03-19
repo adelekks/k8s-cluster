@@ -1,0 +1,43 @@
+cluster_name: awx-k8s-dev
+kubernetes_version: "1.35.0"
+pod_network_cidr: "10.244.0.0/16"
+service_cidr: "10.96.0.0/12"
+
+vip_address: "156.119.193.219"
+vip_interface: "ens192"
+vip_cidr: "24"
+vrrp_router_id: 51
+vrrp_auth_pass: "ChangeMe123!"
+keepalived_priority:
+  cmhb-k8s-dev01: 120
+  cmhb-k8s-dev02: 110
+  cmhb-k8s-dev03: 100
+
+apiserver_bind_port: 6442
+haproxy_frontend_port: 6443
+kubernetes_control_plane_endpoint: "156.119.193.219:6443"
+
+containerd_sandbox_image: "registry.k8s.io/pause:3.10"
+
+disable_firewalld: true
+disable_selinux: false
+set_selinux_permissive: true
+disable_swap: true
+
+nfs_server: "10.224.166.24"
+nfs_path: "/cmhb-config-kb"
+
+install_ingress_nginx: true
+install_nfs_storage: true
+install_awx: true
+
+awx_namespace: "awx"
+awx_operator_version: "2.19.1"
+awx_admin_user: "admin"
+awx_admin_password: "ChangeMeAwx123!"
+awx_hostname: "awx-dev.sgs.com"
+
+awx_web_replicas: 2
+awx_task_replicas: 2
+
+cluster_dns_ip: "10.96.0.10"

@@ -1,0 +1,22 @@
+- name: Check if worker already joined
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: joined
+
+- name: Copy worker join script from admin
+  delegate_to: "{{ groups['admin'][0] }}"
+  slurp:
+    src: /root/kubeadm/join-worker.sh
+  register: join_script_b64
+  when: not joined.stat.exists
+
+- name: Place worker join script
+  copy:
+    dest: /root/join-worker.sh
+    mode: '0700'
+    content: "{{ join_script_b64.content | b64decode }}"
+  when: not joined.stat.exists
+
+- name: Join worker node
+  command: /root/join-worker.sh
+  when: not joined.stat.exists
